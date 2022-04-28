@@ -34,6 +34,6 @@ def make_csv_files_from_json_files(path="/home/maksim/Documents/ML/Datasets/Spot
 
     df_track_unique = df_track.drop_duplicates('track_uri').drop('pid', axis=1)
 
-    df_playlist.to_csv(path + '/playlist_track_full.csv', encoding='utf-8', index=False)
-    df_track_unique.to_csv(path + '/playlist_full.csv', encoding='utf-8', index=False)
-    df_playlist_track.to_csv(path + '/track_full.csv', encoding='utf-8', index=False)
+    df_playlist.to_csv(path + '/playlist_full.csv', encoding='utf-8', index=False)
+    df_track_unique.to_csv(path + '/track_full.csv', encoding='utf-8', index=False)
+    df_playlist_track.to_csv(path + '/playlist_track_full.csv', encoding='utf-8', index=False)
