@@ -10,6 +10,5 @@ def drop_tables(conn):
 
 
 def csv_table_to_sql(engine, path, filename):
-    print(filename)
     df = pd.read_csv(path + filename)
     df.to_sql(filename[:-9], con=engine, if_exists='replace', index=False, chunksize=5)

@@ -4,11 +4,11 @@ from sqlalchemy import create_engine
 import psycopg2
 import yaml
 
+
 DATA_IS_NOT_CONVERTED = False
 TABLES_ARE_NOT_CREATED = False
 CREDENTIALS = yaml.safe_load(open('/home/maksim/Documents/credentials.yml'))
 PATH = '/home/maksim/Documents/ML/Datasets/Spotify_data/'
-
 
 
 def main():
@@ -19,6 +19,7 @@ def main():
                                .format(CREDENTIALS['maksim']['password']))
         for filename in ['playlist_full.csv', 'track_full.csv', 'playlist_track_full.csv']:
             load_data_to_database.csv_table_to_sql(engine, PATH, filename)
+
     return 0
 
 
