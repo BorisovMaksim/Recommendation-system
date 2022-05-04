@@ -3,13 +3,9 @@ import load_data_to_database
 from sqlalchemy import create_engine
 import pandas as pd
 from get_songs import download_songs
-from myconstants import CREDENTIALS, PATH
+from myconstants import *
 
 
-
-DATA_IS_NOT_CONVERTED = False
-TABLES_ARE_NOT_CREATED = False
-SONGS_ARE_NOT_DOWNLOADED = False
 
 
 
