@@ -4,7 +4,7 @@ import spotipy
 import os
 from spotipy.oauth2 import SpotifyOAuth
 import shutil
-from myconstants import CREDENTIALS, SONG_PATH
+from myconstants import CREDENTIALS, SPOTIFY_JSONS_PATH
 import pandas as pd
 
 
@@ -32,7 +32,7 @@ def get_track_url(track_uri):
 
 
 def download_song_from_youtube(track_url):
-    bash_command = "spotify_dl -l {} -s -o {}".format(track_url, SONG_PATH)
+    bash_command = "spotify_dl -l {} -s -o {}".format(track_url, SPOTIFY_JSONS_PATH)
     error, output = None, None
     try:
         process = subprocess.Popen(bash_command.split(), stdout=subprocess.PIPE)
@@ -44,12 +44,12 @@ def download_song_from_youtube(track_url):
 
 
 def extract_song_from_folder(saved_directory, rename):
-    dir_path = SONG_PATH + saved_directory
+    dir_path = SPOTIFY_JSONS_PATH + saved_directory
     new_path = None
     for root, dirs, files in os.walk(dir_path):
         for file in files:
             if file.endswith('.mp3'):
-                new_path = SONG_PATH + rename
+                new_path = SPOTIFY_JSONS_PATH + rename
                 os.rename(dir_path + "/" + file, new_path)
     shutil.rmtree(dir_path)
     return new_path

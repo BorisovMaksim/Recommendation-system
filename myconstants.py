@@ -1,8 +1,8 @@
 import yaml
 
-CREDENTIALS = yaml.safe_load(open('/home/maksim/Documents/credentials.yml'))
-PATH = '/home/maksim/Documents/ML/Datasets/Spotify_data/'
-SONG_PATH = '/home/maksim/Documents/ML/Datasets/Spotify_data/songs/'
+CREDENTIALS = yaml.safe_load(open('/home/maksim/Data/credentials.yml'))
+SPOTIFY_DATA_PATH = '/home/maksim/Data/Spotify'
+SPOTIFY_JSONS_PATH = '/home/maksim/Data/Spotify/data'
 
 DATA_IS_NOT_CONVERTED = True
 TABLES_ARE_NOT_CREATED = False

@@ -16,14 +16,14 @@ def main():
         convert_data.make_csv_files_from_json_files()
     if TABLES_ARE_NOT_CREATED:
         for filename in ['playlist_full.csv', 'track_full.csv', 'playlist_track_full.csv']:
-            load_data_to_database.csv_table_to_sql(engine, PATH, filename)
+            load_data_to_database.csv_table_to_sql(engine, SPOTIFY_DATA_PATH, filename)
     if SONGS_ARE_NOT_DOWNLOADED:
         playlist_track_random = pd.read_sql_query('WITH random_pid AS '
                                                   '(select pid from playlist order by random() limit 100) '
                                                   'select playlist_track.pid, track_uri from playlist_track, random_pid'
                                                   ' WHERE playlist_track.pid = random_pid.pid', con=engine)
         playlist_track_random['track_path'] = download_songs(playlist_track_random['track_uri'])
-        playlist_track_random.to_pickle(PATH + "/dataframes/playlist_track_random.pkl")
+        playlist_track_random.to_pickle(SPOTIFY_DATA_PATH + "/dataframes/playlist_track_random.pkl")
     return 0
 
 
