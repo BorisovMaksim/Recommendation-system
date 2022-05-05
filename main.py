@@ -15,7 +15,7 @@ def main():
     if DATA_IS_NOT_CONVERTED:
         convert_data.make_csv_files_from_json_files()
     if AUDIO_FEATURES_ARE_NOT_PARSED:
-        audio_features = get_audio_features(track_path='track_full.csv', step=50)
+        audio_features = get_audio_features(track_path='track_full.csv', step=100)
         audio_features.to_sql('track', con=engine, if_exists='replace', index=False, chunksize=5)
     if TABLES_ARE_NOT_CREATED:
         for filename in ['playlist_full.csv', 'playlist_track_full.csv']:
