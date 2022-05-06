@@ -19,8 +19,8 @@ def main():
         audio_features.to_sql('track', con=engine, if_exists='replace', index=False, chunksize=5)
     if TABLES_ARE_NOT_CREATED:
         for filename in ['playlist_full.csv', 'playlist_track_full.csv']:
-            df = pd.read_csv(SPOTIFY_DATA_PATH + filename)
-            df.to_sql(filename[:-9], con=engine, if_exists='replace', index=False, chunksize=5)
+            df = pd.read_csv(f"{SPOTIFY_DATA_PATH}/{filename}")
+            df.to_sql(filename[:-9], con=engine, if_exists='replace', index=False, chunksize=10)
     if SONGS_ARE_NOT_DOWNLOADED:
         playlist_track_random = pd.read_sql_query('WITH random_pid AS '
                                                   '(select pid from playlist order by random() limit 100) '
