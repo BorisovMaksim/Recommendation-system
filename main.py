@@ -9,6 +9,7 @@ from convert_data import make_csv_files_from_json_files
 
 
 def main():
+
     engine = create_engine(f"postgresql+psycopg2://{CREDENTIALS['DATABASE']['USERNAME']}:"
                            f"{CREDENTIALS['DATABASE']['PASSWORD']}@{CREDENTIALS['DATABASE']['HOST']}:"
                            f"{CREDENTIALS['DATABASE']['PORT']}/{CREDENTIALS['DATABASE']['DB']}")
