@@ -1,19 +1,24 @@
-import convert_data
 from sqlalchemy import create_engine
 import pandas as pd
+
 from get_songs import download_songs
 from myconstants import *
 from load_data_from_spotify_api import get_audio_features
-
-
+from convert_data import make_csv_files_from_json_files
 
 
 
 def main():
-    engine = create_engine('postgresql+psycopg2://maksim:{}@localhost/spotify'
-                           .format(CREDENTIALS['maksim']['password']))
+    engine = create_engine(f"postgresql+psycopg2://{CREDENTIALS['DATABASE']['USERNAME']}:"
+                           f"{CREDENTIALS['DATABASE']['PASSWORD']}@{CREDENTIALS['DATABASE']['HOST']}:"
+                           f"{CREDENTIALS['DATABASE']['PORT']}/{CREDENTIALS['DATABASE']['DB']}")
+
+    # print(pd.read_sql_query('WITH random_pid AS '
+    #                                               '(select pid from playlist order by random() limit 10) '
+    #                                               'select playlist_track.pid, track_uri from playlist_track, random_pid'
+    #                                               ' WHERE playlist_track.pid = random_pid.pid', con=engine))
     if DATA_IS_NOT_CONVERTED:
-        convert_data.make_csv_files_from_json_files()
+        make_csv_files_from_json_files()
     if AUDIO_FEATURES_ARE_NOT_PARSED:
         audio_features = get_audio_features(track_path='track_full.csv', step=100)
         audio_features.to_sql('track', con=engine, if_exists='replace', index=False, chunksize=5)
