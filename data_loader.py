@@ -29,13 +29,14 @@ class DataLoader:
                                                             redirect_uri=my_config['SPOTIFY']['REDIRECT_URI'],
                                                             scope="user-library-read"))
 
-    def load_random(self, num_playlists):
+    def load_random(self, num_playlists, status):
+        if not status:
+            return 1
         playlist_track_random = pd.read_sql_query(f'WITH random_pid AS '
                                                   f'(select pid from playlist order by random() limit {num_playlists}) '
                                                   f'select playlist_track.pid, track_uri from playlist_track,random_pid'
                                                   f' WHERE playlist_track.pid = random_pid.pid', con=self.engine)
         playlist_track_random['track_path'] = self.download_songs(playlist_track_random['track_uri'])
-        # playlist_track_random.to_pickle(self.root_dir + "/playlist_track_random.pkl")
 
     def download_songs(self, series_uri):
         if not os.path.exists(self.song_directory):
@@ -74,6 +75,7 @@ class DataLoader:
             print(output)
             print("You need to set your Spotify API credentials")
             raise
+        saved_directory = saved_directory.replace("\n", '')
         return saved_directory
 
     def extract_song_from_folder(self, saved_directory, rename):
