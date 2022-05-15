@@ -54,4 +54,5 @@ class App:
     def fit(self, dataset):
         pipeline = self.create_pipeline()
         dataset = pipeline.fit_transform(dataset)
-        pass
+        return dataset
+

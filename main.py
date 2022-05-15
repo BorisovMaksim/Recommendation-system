@@ -11,6 +11,7 @@ def main(ml_stage):
     else:
         test = df
     del df
+    m1.fit(train)
 
     return 1
 
