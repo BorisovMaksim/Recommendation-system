@@ -28,13 +28,6 @@ class DataConverter:
         self.jsons_dir = os.path.join(self.root_dir, "data/")
 
     def make_csv_files_from_json_files(self, chunk_size=10):
-        if (os.path.exists(os.path.join(self.root_dir, 'track_full.csv'))
-            and os.path.exists(os.path.join(self.root_dir, 'playlist_full.csv'))
-            and os.path.exists(os.path.join(self.root_dir, 'playlist_track_full.csv'))) or \
-                os.path.isdir(os.path.join(self.root_dir, 'songs')):
-            print("FILES ARE ALREADY CONVERTED FROM JSON TO CSV")
-            return 1
-
         filenames = os.listdir(self.jsons_dir)
         for chunk_num in range(chunk_size):
             print(f"{chunk_num} CHUNKS OUT OF {chunk_size} PROCESSED")

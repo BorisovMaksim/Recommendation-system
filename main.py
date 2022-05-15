@@ -2,16 +2,15 @@ from app import App
 
 
 def main(ml_stage):
-    model_id = "my_model_name"
-    m1 = App(model_id, ml_stage)
-    m1.create_premodel_data()
-    df = m1.load_premodel_data()
-    if ml_stage == "train":
-        train, test = m1.train_test_split(df, split_size=0.8)
-    else:
-        test = df
-    del df
-    m1.fit(train)
+    system = App(stage=ml_stage, model_id="my_model_name")
+    system.process_raw_data()
+    system.load_data_to_db()
+    system.download_songs()
+
+    # df = system.load_premodel_data()
+
+    # train, test = system.train_test_split(df, split_size=0.8)
+    # system.fit(train)
 
     return 1
 

@@ -7,27 +7,31 @@ import numpy as np
 
 class App:
     def __init__(self, model_id, stage):
+        if stage not in ['creating_csv', 'loading_data', 'downloading_songs', 'loading_model']:
+            print("ML Stages are: \n1. creating_csv\n2. loading_data\n3. loading_songs\n4. loading_model\n")
         self.model_id = model_id
         self.stage = stage
-        # self.pipeline_ensemble = Pipeline() My_pipeline
         self.col_type_tgt = []
         self.col_type_double = []
         self.col_type_string = []
         self.loader = DataLoader()
         self.converter = DataConverter()
 
-    def create_premodel_data(self, num_playlists=10):
+    def process_raw_data(self):
         if self.stage == "creating_csv":
             self.converter.make_csv_files_from_json_files()
-        elif self.stage == "loading_data":
+
+    def load_data_to_db(self):
+        if self.stage == "loading_data":
             self.loader.load_audio_features_to_db()
             self.loader.load_csv_tables_to_db()
             cleaner = DataCleaner()
             cleaner.clean(retain="songs")
-        elif self.stage == "loading_songs":
+
+    def download_songs(self, num_playlists=10):
+        if self.stage == "downloading_songs":
             self.loader.load_random(num_playlists=num_playlists)
-        else:
-            print("ML Stages are: \n1. creating_csv\n2. loading_data\n3. loading_songs\n4. loading_model\n")
+
 
     def load_premodel_data(self):
         df = self.loader.load_dataframe_from_db()
