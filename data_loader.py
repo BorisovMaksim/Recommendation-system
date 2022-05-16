@@ -36,8 +36,14 @@ class DataLoader:
                                                   f' WHERE playlist_track.pid = random_pid.pid', con=self.engine)
         playlist_track_random['track_path'] = self.download_songs(playlist_track_random['track_uri'])
 
-    def load_dataframe_from_db(self, name):
-        df = pd.read_sql_query(f"""SELECT * FROM {name};""", con=self.engine)
+    def load_track_data(self):
+        df = pd.read_sql_query(f"""SELECT pos, duration_ms, danceability,  energy, key,
+       loudness, mode, speechiness, acousticness, instrumentalness,
+       liveness, valence, tempo, track_primary_id FROM track""", con=self.engine)
+        return df
+
+    def load_playlist_data(self):
+        df = pd.read_sql_query("SELECT playlist_primary_id FROM playlist", con=self.engine)
         return df
 
     def download_songs(self, series_uri):

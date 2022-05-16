@@ -1,8 +1,11 @@
+import pandas as pd
+
 from data_converter import DataConverter
 from data_loader import DataLoader
 from data_cleaner import DataCleaner
 from pipeline_creator import PipelineCreator
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 
 class App:
@@ -33,21 +36,28 @@ class App:
             self.loader.load_random(num_playlists=num_playlists)
 
 
-    def load_dataframe(self, name):
-        df = self.loader.load_dataframe_from_db(name)
-        # self.extract_model_cols(df)
-        return df
 
-    def extract_model_cols(self, df):
-        self.col_type_double = df.select_dtypes(include='number').columns
-        self.col_type_string = df.select_dtypes(include='object').columns
+    # def extract_model_cols(self, df):
+    #     self.col_type_double = df.select_dtypes(include='number').columns
+    #     self.col_type_string = df.select_dtypes(include='object').columns
 
-    # def create_pipeline(self):
-    #     pipeline_creator = PipelineCreator(numeric_impute_strategy="mean", categorical_impute_strategy="most_frequent",
-    #                                        numerical_features=self.col_type_double,
-    #                                        categorical_features=self.col_type_string)
-    #     pipeline = pipeline_creator.create()
-    #     return pipeline
+    def train(self):
+        # track = self.loader.load_track_data()
+        playlist_id = self.loader.load_playlist_data()
+        playlist_train, playlist_test = train_test_split(playlist_id, test_size=0.2, random_state=1)
+        playlist_train, playlist_validation = train_test_split(playlist_train, test_size=0.25, random_state=1)
+        playlist_train_string = [str(x) for x in playlist_train]
+        track_train = pd.read_sql_query(f"""SELECT * FROM track LEFT JOIN playlist_track_int ON 
+        track.track_primary_id = playlist_track_int.track_primary_id WHERE playlist_track_int.playlist_primary_id 
+                            IN ({ ', '.join(playlist_train_string)})""", con=self.loader.engine)
+        print(track_train)
+
+    def create_pipeline(self):
+        pipeline_creator = PipelineCreator(numeric_impute_strategy="mean", categorical_impute_strategy="most_frequent",
+                                           numerical_features=self.col_type_double,
+                                           categorical_features=self.col_type_string)
+        pipeline = pipeline_creator.create()
+        return pipeline
     #
     # def train_test_split(self, df, split_size=0.8):
     #     is_train = df.pid in np.random.permutation(df.pid)[:len(df.pid)*split_size]
