@@ -33,30 +33,30 @@ class App:
             self.loader.load_random(num_playlists=num_playlists)
 
 
-    def load_premodel_data(self):
-        df = self.loader.load_dataframe_from_db()
-        self.extract_model_cols(df)
+    def load_dataframe(self, name):
+        df = self.loader.load_dataframe_from_db(name)
+        # self.extract_model_cols(df)
         return df
 
     def extract_model_cols(self, df):
         self.col_type_double = df.select_dtypes(include='number').columns
         self.col_type_string = df.select_dtypes(include='object').columns
 
-    def create_pipeline(self):
-        pipeline_creator = PipelineCreator(numeric_impute_strategy="mean", categorical_impute_strategy="most_frequent",
-                                           numerical_features=self.col_type_double,
-                                           categorical_features=self.col_type_string)
-        pipeline = pipeline_creator.create()
-        return pipeline
-
-    def train_test_split(self, df, split_size=0.8):
-        is_train = df.pid in np.random.permutation(df.pid)[:len(df.pid)*split_size]
-        train = df[is_train]
-        test = df[not is_train]
-        return train, test
-
-    def fit(self, dataset):
-        pipeline = self.create_pipeline()
-        dataset = pipeline.fit_transform(dataset)
-        return dataset
+    # def create_pipeline(self):
+    #     pipeline_creator = PipelineCreator(numeric_impute_strategy="mean", categorical_impute_strategy="most_frequent",
+    #                                        numerical_features=self.col_type_double,
+    #                                        categorical_features=self.col_type_string)
+    #     pipeline = pipeline_creator.create()
+    #     return pipeline
+    #
+    # def train_test_split(self, df, split_size=0.8):
+    #     is_train = df.pid in np.random.permutation(df.pid)[:len(df.pid)*split_size]
+    #     train = df[is_train]
+    #     test = df[not is_train]
+    #     return train, test
+    #
+    # def fit(self, dataset):
+    #     pipeline = self.create_pipeline()
+    #     dataset = pipeline.fit_transform(dataset)
+    #     return dataset
 

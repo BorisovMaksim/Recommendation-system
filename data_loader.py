@@ -36,14 +36,8 @@ class DataLoader:
                                                   f' WHERE playlist_track.pid = random_pid.pid', con=self.engine)
         playlist_track_random['track_path'] = self.download_songs(playlist_track_random['track_uri'])
 
-    def load_dataframe_from_db(self):
-        features = """playlist_track.pid, track.pos, track.track_name, danceability, energy, key, loudness, mode, 
-        speechiness, acousticness, instrumentalness, liveness, valence, tempo, time_signature, name, collaborative, 
-        modified_at, num_tracks, num_albums, num_followers, num_edits, playlist.duration_ms, num_artists, description 
-        """
-        df = pd.read_sql_query(f"""SELECT {features} FROM playlist_track JOIN track on playlist_track.track_uri = 
-        concat('spotify:track:',track.id) JOIN playlist ON playlist_track.pid = playlist.pid limit 100""",
-                               con=self.engine)
+    def load_dataframe_from_db(self, name):
+        df = pd.read_sql_query(f"""SELECT * FROM {name};""", con=self.engine)
         return df
 
     def download_songs(self, series_uri):
