@@ -44,7 +44,6 @@ class DataConverter:
         df_playlist, df_track, df_playlist_track = self.concatenate_csv_files(['playlist', 'track', 'playlist_track'],
                                                                               chunk_size)
         df_track_unique = df_track.drop_duplicates('track_uri').drop('pid', axis=1)
-
         if self.make_csv_files([df_playlist, df_track_unique, df_playlist_track],
                                ['playlist', 'track', 'playlist_track'], 'full'):
             print(f"ALL CSV FILES ARE SAVED AT {self.root_dir}")

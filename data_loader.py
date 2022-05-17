@@ -11,10 +11,6 @@ import time
 from config import my_config
 
 
-# spotify_dl
-# ffprobe
-# ffmpeg
-
 class DataLoader:
     def __init__(self):
         self.root_dir = my_config['SPOTIFY']['DATA_PATH']
@@ -34,37 +30,23 @@ class DataLoader:
                                                   f'(select pid from playlist order by random() limit {num_playlists}) '
                                                   f'select playlist_track.pid, track_uri from playlist_track,random_pid'
                                                   f' WHERE playlist_track.pid = random_pid.pid', con=self.engine)
-        playlist_track_random['track_path'] = self.download_songs(playlist_track_random['track_uri'])
+        self.download_songs(playlist_track_random['track_uri'])
 
-    def load_track_data(self):
-        df = pd.read_sql_query(f"""SELECT pos, duration_ms, danceability,  energy, key,
-       loudness, mode, speechiness, acousticness, instrumentalness,
-       liveness, valence, tempo, track_primary_id FROM track""", con=self.engine)
-        return df
-
-    def load_playlist_data(self):
-        df = pd.read_sql_query("SELECT playlist_primary_id FROM playlist", con=self.engine)
-        return df
 
     def download_songs(self, series_uri):
         if not os.path.exists(self.song_directory):
             os.makedirs(self.song_directory)
-
         songs_exists = series_uri.apply(lambda x: os.path.exists(os.path.join(self.song_directory, f'{x}')))
-        series_uri_new = series_uri[songs_exists == False]
+        series_uri_new = series_uri[~songs_exists]
         print("{} SONGS ARE TO BE DOWNLOADED".format(len(series_uri_new)))
-        return pd.Series(self.download_song(x[0], x[1]) for x in enumerate(series_uri_new))
 
     def download_song(self, num, spotify_track_uri):
         print("DOWNLOADING SONG № {}".format(num))
-        track_url = self.get_track_url(spotify_track_uri)
+        track_url = self.sp.track(spotify_track_uri)['external_urls']['spotify']
         saved_directory = self.download_song_from_youtube(track_url)
         new_path = self.extract_song_from_folder(saved_directory, rename=spotify_track_uri)
         return new_path
 
-    def get_track_url(self, track_uri):
-        track_url = self.sp.track(track_uri)['external_urls']['spotify']
-        return track_url
 
     def download_song_from_youtube(self, track_url):
         os.putenv("SPOTIPY_CLIENT_ID", my_config['SPOTIFY']['CLIENT_ID'])

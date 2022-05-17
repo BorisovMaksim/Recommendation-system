@@ -36,21 +36,31 @@ class App:
             self.loader.load_random(num_playlists=num_playlists)
 
 
-
-    # def extract_model_cols(self, df):
-    #     self.col_type_double = df.select_dtypes(include='number').columns
-    #     self.col_type_string = df.select_dtypes(include='object').columns
+    def train_test_val_split(self):
+        playlist_id = pd.read_sql_query("SELECT playlist_primary_id FROM playlist", con=self.loader.engine)
+        train_id, test_id = train_test_split(playlist_id, test_size=0.2, random_state=1)
+        train_id, validation_id = train_test_split(train_id, test_size=0.25, random_state=1)
+        train_id.to_pickle("/home/maksim/Data/Spotify/train_id.pkl")
+        test_id.to_pickle("/home/maksim/Data/Spotify/test_id.pkl")
+        validation_id.to_pickle("/home/maksim/Data/Spotify/validation_id.pkl")
 
     def train(self):
-        # track = self.loader.load_track_data()
-        playlist_id = self.loader.load_playlist_data()
-        playlist_train, playlist_test = train_test_split(playlist_id, test_size=0.2, random_state=1)
-        playlist_train, playlist_validation = train_test_split(playlist_train, test_size=0.25, random_state=1)
-        playlist_train_string = [str(x) for x in playlist_train]
-        track_train = pd.read_sql_query(f"""SELECT * FROM track LEFT JOIN playlist_track_int ON 
-        track.track_primary_id = playlist_track_int.track_primary_id WHERE playlist_track_int.playlist_primary_id 
-                            IN ({ ', '.join(playlist_train_string)})""", con=self.loader.engine)
-        print(track_train)
+        train_id = pd.read_pickle("/home/maksim/Data/Spotify/train_id.pkl")
+        train_id_str = ", ".join(train_id.values.flatten().astype("str"))
+
+        # train_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness',
+        #               'instrumentalness', 'liveness', 'valence', 'tempo']
+        # sub_statement = ", ".join([f"AVG({col}) AS avg_{col}" for col in train_cols])
+        # train = pd.read_sql_query(f"""SELECT playlist_track_int.playlist_primary_id, {sub_statement} FROM track JOIN
+        #         playlist_track_int ON track.track_primary_id = playlist_track_int.track_primary_id WHERE
+        #          playlist_track_int.playlist_primary_id IN ({train_id_str}) GROUP BY playlist_track_int.playlist_primary_id;""",
+        #                           con=self.loader.engine)
+
+        # train_track = pd.read_sql_query(f"""SELECT pos, duration_ms, danceability,  energy, key, loudness, mode,
+        #        speechiness, acousticness, instrumentalness, liveness, valence, tempo, track_primary_id FROM track """,
+        #                                 con=self.loader.engine)
+
+        pass
 
     def create_pipeline(self):
         pipeline_creator = PipelineCreator(numeric_impute_strategy="mean", categorical_impute_strategy="most_frequent",
