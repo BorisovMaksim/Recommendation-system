@@ -45,8 +45,7 @@ class App:
         validation_id.to_pickle("/home/maksim/Data/Spotify/validation_id.pkl")
 
     def tracks_similarity(self):
-        sim = pd.read_sql_query("SELECT * FROM playlist_track", con=self.loader.engine)
-
+        pass
     def train(self):
         train_id = pd.read_pickle("/home/maksim/Data/Spotify/train_id.pkl")
         train_id_str = ", ".join(train_id.values.flatten().astype("str"))
