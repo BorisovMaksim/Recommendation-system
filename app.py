@@ -36,13 +36,33 @@ class App:
             self.loader.load_random(num_playlists=num_playlists)
 
 
-    def train_test_val_split(self):
+    def train_test_split(self):
         playlist_id = pd.read_sql_query("SELECT playlist_primary_id FROM playlist", con=self.loader.engine)
         train_id, test_id = train_test_split(playlist_id, test_size=0.2, random_state=1)
-        train_id, validation_id = train_test_split(train_id, test_size=0.25, random_state=1)
-        train_id.to_pickle("/home/maksim/Data/Spotify/train_id.pkl")
-        test_id.to_pickle("/home/maksim/Data/Spotify/test_id.pkl")
-        validation_id.to_pickle("/home/maksim/Data/Spotify/validation_id.pkl")
+        train_id_str = ", ".join(train_id.values.flatten().astype("str"))
+        train_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness',
+                      'instrumentalness', 'liveness', 'valence', 'tempo']
+        sub_statement = ", ".join([f"AVG({col}) AS {col}" for col in train_cols])
+        playlist_train = pd.read_sql_query(
+            f"""SELECT playlist_track_int.playlist_primary_id, 
+            array_agg(playlist_track_int.track_primary_id) AS tracks_in_playlist, {sub_statement} FROM 
+            track JOIN playlist_track_int 
+            ON track.track_primary_id = playlist_track_int.track_primary_id 
+            WHERE playlist_track_int.playlist_primary_id IN ({train_id_str}) 
+            GROUP BY playlist_track_int.playlist_primary_id;""",
+            con=self.loader.engine)
+        playlist_test = pd.read_sql_query(
+            f"""SELECT playlist_track_int.playlist_primary_id, 
+                    array_agg(playlist_track_int.track_primary_id) AS tracks_in_playlist, {sub_statement} FROM 
+                    track JOIN playlist_track_int 
+                    ON track.track_primary_id = playlist_track_int.track_primary_id 
+                    WHERE playlist_track_int.playlist_primary_id NOT IN ({train_id_str}) 
+                    GROUP BY playlist_track_int.playlist_primary_id;""",
+            con=self.loader.engine)
+        playlist_train.to_sql("playlist_train", con=self.loader.engine)
+        playlist_test.to_sql("playlist_test", con=self.loader.engine)
+        return playlist_train, playlist_test
+
 
     def tracks_similarity(self):
         pass
@@ -70,15 +90,4 @@ class App:
                                            categorical_features=self.col_type_string)
         pipeline = pipeline_creator.create()
         return pipeline
-    #
-    # def train_test_split(self, df, split_size=0.8):
-    #     is_train = df.pid in np.random.permutation(df.pid)[:len(df.pid)*split_size]
-    #     train = df[is_train]
-    #     test = df[not is_train]
-    #     return train, test
-    #
-    # def fit(self, dataset):
-    #     pipeline = self.create_pipeline()
-    #     dataset = pipeline.fit_transform(dataset)
-    #     return dataset
 
