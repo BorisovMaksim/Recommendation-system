@@ -1,5 +1,4 @@
 import pandas as pd
-
 from data_converter import DataConverter
 from data_loader import DataLoader
 from data_cleaner import DataCleaner
@@ -52,10 +51,11 @@ class App:
             GROUP BY playlist_track_int.playlist_primary_id;""",
             con=self.loader.engine)
         playlist_test = pd.read_sql_query(
-            f"""SELECT playlist_track_int.playlist_primary_id, 
+            f""" WITH test_track AS (SELECT * from track ORDER BY random() LIMIT (select count(*)*0.8 from track))
+                    SELECT playlist_track_int.playlist_primary_id, 
                     array_agg(playlist_track_int.track_primary_id) AS tracks_in_playlist, {sub_statement} FROM 
-                    track JOIN playlist_track_int 
-                    ON track.track_primary_id = playlist_track_int.track_primary_id 
+                    test_track JOIN playlist_track_int 
+                    ON test_track.track_primary_id = playlist_track_int.track_primary_id 
                     WHERE playlist_track_int.playlist_primary_id NOT IN ({train_id_str}) 
                     GROUP BY playlist_track_int.playlist_primary_id;""",
             con=self.loader.engine)
@@ -64,25 +64,24 @@ class App:
         return playlist_train, playlist_test
 
 
-    def tracks_similarity(self):
-        pass
-    def train(self):
-        train_id = pd.read_pickle("/home/maksim/Data/Spotify/train_id.pkl")
-        train_id_str = ", ".join(train_id.values.flatten().astype("str"))
 
-        # train_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness',
-        #               'instrumentalness', 'liveness', 'valence', 'tempo']
-        # sub_statement = ", ".join([f"AVG({col}) AS avg_{col}" for col in train_cols])
-        # train = pd.read_sql_query(f"""SELECT playlist_track_int.playlist_primary_id, {sub_statement} FROM track JOIN
-        #         playlist_track_int ON track.track_primary_id = playlist_track_int.track_primary_id WHERE
-        #          playlist_track_int.playlist_primary_id IN ({train_id_str}) GROUP BY playlist_track_int.playlist_primary_id;""",
-        #                           con=self.loader.engine)
+    # def predict_similar_for_playlist(self, playlist, n, track):
+    #     numeric_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
+    #                     'acousticness',
+    #                     'instrumentalness', 'liveness', 'valence', 'tempo']
+    #     tracks_not_in_playlist = track[~track.track_primary_id.isin(playlist['tracks_in_playlist'])]
+    #     X = pd.concat([playlist[numeric_cols].to_frame().T, tracks_not_in_playlist[numeric_cols]])
+    #     pipe = Pipeline([('scaler', StandardScaler()), ('imputer', SimpleImputer(strategy='mean'))])
+    #     X = pipe.fit_transform(X)
+    #     playlist_vals = X[0]
+    #     tracks = X[1:]
+    #     similarity = [
+    #         (cosine_similarity_spatial(playlist_vals, track=tracks[i]), tracks_not_in_playlist.track_primary_id[i]) for
+    #         i in range(len(tracks))]
+    #     top_n_similar = heapq.nlargest(n, similarity)
+    #     return top_n_similar
 
-        # train_track = pd.read_sql_query(f"""SELECT pos, duration_ms, danceability,  energy, key, loudness, mode,
-        #        speechiness, acousticness, instrumentalness, liveness, valence, tempo, track_primary_id FROM track """,
-        #                                 con=self.loader.engine)
 
-        pass
 
     def create_pipeline(self):
         pipeline_creator = PipelineCreator(numeric_impute_strategy="mean", categorical_impute_strategy="most_frequent",
