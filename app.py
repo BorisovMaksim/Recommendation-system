@@ -50,6 +50,7 @@ class App:
             WHERE playlist_track_int.playlist_primary_id IN ({train_id_str}) 
             GROUP BY playlist_track_int.playlist_primary_id;""",
             con=self.loader.engine)
+
         playlist_test = pd.read_sql_query(
             f""" WITH test_track AS (SELECT * from track ORDER BY random() LIMIT (select count(*)*0.8 from track))
                     SELECT playlist_track_int.playlist_primary_id, 
