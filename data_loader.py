@@ -121,3 +121,11 @@ class DataLoader:
             if not self.table_exists(filename[:-9]):
                 df = pd.read_csv(f"{self.jsons_dir}{filename}")
                 df.to_sql(filename[:-9], con=self.engine, if_exists='replace', index=False, chunksize=10)
+
+    def create_playlist_tracks(self):
+        return pd.read_sql_query(
+            f"""SELECT playlist_primary_id, array_agg(track_primary_id) AS tracks_in_playlist FROM playlist_track_int 
+            GROUP BY playlist_primary_id ORDER BY RANDOM()""", con=self.engine)
+
+    def load_playlist_tracks_to_db(self):
+        self.create_playlist_tracks().to_sql(name='playlist_tracks', con=self.engine, if_exists='replace', index=False)

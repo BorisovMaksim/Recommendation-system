@@ -36,33 +36,21 @@ class App:
 
 
     def train_test_split(self):
-        playlist_id = pd.read_sql_query("SELECT playlist_primary_id FROM playlist", con=self.loader.engine)
-        train_id, test_id = train_test_split(playlist_id, test_size=0.2, random_state=1)
-        train_id_str = ", ".join(train_id.values.flatten().astype("str"))
-        train_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness',
-                      'instrumentalness', 'liveness', 'valence', 'tempo']
-        sub_statement = ", ".join([f"AVG({col}) AS {col}" for col in train_cols])
-        playlist_train = pd.read_sql_query(
-            f"""SELECT playlist_track_int.playlist_primary_id, 
-            array_agg(playlist_track_int.track_primary_id) AS tracks_in_playlist, {sub_statement} FROM 
-            track JOIN playlist_track_int 
-            ON track.track_primary_id = playlist_track_int.track_primary_id 
-            WHERE playlist_track_int.playlist_primary_id IN ({train_id_str}) 
-            GROUP BY playlist_track_int.playlist_primary_id;""",
-            con=self.loader.engine)
-
-        playlist_test = pd.read_sql_query(
-            f""" WITH test_track AS (SELECT * from track ORDER BY random() LIMIT (select count(*)*0.8 from track))
-                    SELECT playlist_track_int.playlist_primary_id, 
-                    array_agg(playlist_track_int.track_primary_id) AS tracks_in_playlist, {sub_statement} FROM 
-                    test_track JOIN playlist_track_int 
-                    ON test_track.track_primary_id = playlist_track_int.track_primary_id 
-                    WHERE playlist_track_int.playlist_primary_id NOT IN ({train_id_str}) 
-                    GROUP BY playlist_track_int.playlist_primary_id;""",
-            con=self.loader.engine)
-        playlist_train.to_sql("playlist_train", con=self.loader.engine)
-        playlist_test.to_sql("playlist_test", con=self.loader.engine)
-        return playlist_train, playlist_test
+        if self.loader.table_exists('test') and  self.loader.table_exists('train'):
+            train, test = pd.read_sql_query(f"SELECT * FROM  train", con=self.loader.engine),\
+                          pd.read_sql_query(f"SELECT * FROM  test", con=self.loader.engine)
+        else:
+            test = pd.read_sql_query(
+                f"""SELECT playlist_primary_id, (tracks_in_playlist::int[])[:cardinality(tracks_in_playlist::int[])*0.8] as tracks_included,
+                (tracks_in_playlist::int[])[cardinality(tracks_in_playlist::int[])*0.8:] as tracks_excluded
+                from playlist_tracks LIMIT (SELECT COUNT(*)*0.2 FROM  playlist_tracks) OFFSET (SELECT COUNT(*)*0.8 FROM  playlist_tracks)""",
+                con=self.loader.engine)
+            train = pd.read_sql_query(
+                f"""SELECT playlist_primary_id, (tracks_in_playlist::int[]) as tracks_in_playlist
+                from playlist_tracks LIMIT (SELECT COUNT(*)*0.8 FROM  playlist_tracks)""", con=self.loader.engine)
+            test.to_sql('test', con=self.loader.engine, index=False)
+            train.to_sql('train', con=self.loader.engine, index=False, if_exists='replace', chunksize=100000)
+        return train, test
 
 
 
