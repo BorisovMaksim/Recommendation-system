@@ -6,8 +6,8 @@ from similarity_model import SimilarityModel
 
 class App:
     def __init__(self, model_id, stage):
-        if stage not in ['creating_csv', 'loading_data', 'downloading_songs', 'loading_model']:
-            print("ML Stages are: \n1. creating_csv\n2. loading_data\n3. loading_songs\n4. loading_model\n5. train\n"
+        if stage not in ['creating_csv', 'loading_data', 'downloading_songs', 'loading_model', "train", "test"]:
+            raise ValueError("ML Stages are: \n1. creating_csv\n2. loading_data\n3. downloading_songs\n4. loading_model\n5. train\n"
                   "6. test")
         self.model_id = model_id
         self.stage = stage
