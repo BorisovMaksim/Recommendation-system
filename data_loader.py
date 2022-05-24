@@ -32,7 +32,6 @@ class DataLoader:
                                                   f' WHERE playlist_track.pid = random_pid.pid', con=self.engine)
         self.download_songs(playlist_track_random['track_uri'])
 
-
     def download_songs(self, series_uri):
         if not os.path.exists(self.song_directory):
             os.makedirs(self.song_directory)
@@ -46,7 +45,6 @@ class DataLoader:
         saved_directory = self.download_song_from_youtube(track_url)
         new_path = self.extract_song_from_folder(saved_directory, rename=spotify_track_uri)
         return new_path
-
 
     def download_song_from_youtube(self, track_url):
         os.putenv("SPOTIPY_CLIENT_ID", my_config['SPOTIFY']['CLIENT_ID'])
