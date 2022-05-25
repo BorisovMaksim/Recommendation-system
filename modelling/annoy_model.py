@@ -9,6 +9,7 @@ from sklearn.impute import SimpleImputer
 
 """r_precision for annoy_model after 200 iterations = 0.78"""
 
+
 class AnnoyModel(BaseModel):
     def __init__(self, track=None, playlist_train=None, playlist_test=None):
         self.track = track
@@ -30,7 +31,7 @@ class AnnoyModel(BaseModel):
             vector = track[self.numeric_cols]
             index = track.track_primary_id
             t.add_item(index, vector)
-        t.build(100)
+        t.build(n_trees=10)
         t.save('/home/maksim/Data/Spotify/test.ann')
 
     def test(self):
