@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from annoy import AnnoyIndex
 from sklearn.impute import SimpleImputer
 
-"""r_precision for annoy_model after 200 iterations = 0.78"""
+"""r_precision for annoy_model after 1118 iterations = 0.066"""
 
 
 class AnnoyModel(BaseModel):
