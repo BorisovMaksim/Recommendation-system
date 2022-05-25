@@ -1,4 +1,4 @@
-from base_model import BaseModel
+from modelling.base_model import BaseModel
 import numpy as np
 
 """r_precision for random_model after 199 iterations = 0.008"""

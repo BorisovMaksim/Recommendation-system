@@ -1,9 +1,9 @@
 import numpy as np
+import heapq
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-import heapq
-from base_model import BaseModel
+from modelling.base_model import BaseModel
 
 
 def cosine_similarity_numpy(array, vector):

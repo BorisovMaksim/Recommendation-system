@@ -1,10 +1,10 @@
 import pandas as pd
-from data_converter import DataConverter
-from data_loader import DataLoader
-from data_cleaner import DataCleaner
-from similarity_model import SimilarityModel
-from base_model import BaseModel
-from random_model import RandomModel
+from preprocessing.data_converter import DataConverter
+from preprocessing.data_loader import DataLoader
+from preprocessing.data_cleaner import DataCleaner
+from modelling.similarity_model import SimilarityModel
+from modelling.base_model import BaseModel
+from modelling.random_model import RandomModel
 
 class App:
     def __init__(self, model_name, stage):
