@@ -4,16 +4,16 @@ from data_loader import DataLoader
 from data_cleaner import DataCleaner
 from similarity_model import SimilarityModel
 from base_model import BaseModel
-
+from random_model import RandomModel
 
 class App:
     def __init__(self, model_name, stage):
         if stage not in ['process_raw_data', 'loading_data_to_db', 'downloading_songs', "train"]:
             raise ValueError(
                 "Stages are: \n1. process_raw_data\n2. loading_data_to_db\n3. downloading_songs\n4. train\n")
-        if model_name not in ['cos_similarity']:
+        if model_name not in ['random','cos_similarity']:
             raise ValueError(
-                "Models are: \n1. cos_similarity")
+                "Models are: \n1.random\n2. cos_similarity")
         self.model_name = model_name
         self.stage = stage
         self.col_type_tgt = []
@@ -21,7 +21,7 @@ class App:
         self.col_type_string = []
         self.loader = DataLoader()
         self.converter = DataConverter()
-        self.models = {"cos_similarity": SimilarityModel}
+        self.models = {"cos_similarity": SimilarityModel, "random": RandomModel}
         self.model = self.models[self.model_name]
 
     def get_model(self, track, train, test) -> BaseModel:
