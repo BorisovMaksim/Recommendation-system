@@ -11,4 +11,4 @@ def main(stage, model_name):
 
 
 if __name__ == '__main__':
-    main("train", "cos_similarity")
+    main("train", "annoy")

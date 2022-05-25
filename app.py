@@ -5,13 +5,15 @@ from preprocessing.data_cleaner import DataCleaner
 from modelling.similarity_model import SimilarityModel
 from modelling.base_model import BaseModel
 from modelling.random_model import RandomModel
+from modelling.annoy_model import AnnoyModel
+
 
 class App:
     def __init__(self, model_name, stage):
         if stage not in ['process_raw_data', 'loading_data_to_db', 'downloading_songs', "train"]:
             raise ValueError(
                 "Stages are: \n1. process_raw_data\n2. loading_data_to_db\n3. downloading_songs\n4. train\n")
-        if model_name not in ['random','cos_similarity']:
+        if model_name not in ['random', 'cos_similarity', 'annoy']:
             raise ValueError(
                 "Models are: \n1.random\n2. cos_similarity")
         self.model_name = model_name
@@ -21,7 +23,7 @@ class App:
         self.col_type_string = []
         self.loader = DataLoader()
         self.converter = DataConverter()
-        self.models = {"cos_similarity": SimilarityModel, "random": RandomModel}
+        self.models = {"cos_similarity": SimilarityModel, "random": RandomModel, "annoy": AnnoyModel}
         self.model = self.models[self.model_name]
 
     def get_model(self, track, train, test) -> BaseModel:
@@ -43,7 +45,7 @@ class App:
             self.loader.load_random(num_playlists=num_playlists)
 
     def train_test_split(self):
-        if self.stage == "train" or self.stage == "test":
+        if self.stage == "train":
             if self.loader.table_exists('test') and self.loader.table_exists('train'):
                 train, test = pd.read_sql_query(f"SELECT * FROM  train", con=self.loader.engine), \
                               pd.read_sql_query(f"SELECT * FROM  test", con=self.loader.engine)
