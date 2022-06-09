@@ -1,8 +1,9 @@
-import os
 import pandas as pd
+from config import my_config
+import tarfile
+import os
 import json
 from itertools import chain
-from config import my_config
 
 
 def process_json(filename, playlist_track, track, playlist):
@@ -16,7 +17,6 @@ def process_json(filename, playlist_track, track, playlist):
                                          for j in range(len(playlist_temp))])
     track_temp = pd.DataFrame(list(chain.from_iterable(playlist_temp['tracks'])))
 
-
     playlist_track = pd.concat([playlist_track, track_temp[['pid', 'track_uri']]])
     track = pd.concat([track, track_temp]).drop_duplicates('track_uri')
     playlist = pd.concat([playlist, playlist_temp.drop(columns=['tracks'], axis=1)])
@@ -27,6 +27,29 @@ class DataConverter:
     def __init__(self):
         self.root_dir = my_config['SPOTIFY']['DATA_PATH']
         self.jsons_dir = os.path.join(self.root_dir, "data/")
+
+
+    def create_db(self):
+        path = "/home/maksim/Downloads/spotify_jsons.tar.gz"
+        tar = tarfile.open(path, "r:gz")
+        for member in tar.getmembers():
+            if os.path.splitext(member.name)[1] == ".json":
+                f = tar.extractfile(member)
+                content = f.read()
+                js = json.loads(content)
+                playlist_df = pd.DataFrame(js['playlists'])
+                track_df = pd.json_normalize(playlist_df['tracks'].explode('tracks')).drop('pos',
+                                                                                           axis=1).drop_duplicates(
+                    subset='track_uri')
+                playlist_track_df = pd.concat([playlist_df['pid'], playlist_df.tracks.apply(
+                    lambda row: [[playlist['track_uri'], playlist['pos']] for playlist in row])], axis=1).explode(
+                    'tracks')
+                playlist_track_df[['tracks', 'pos']] = pd.DataFrame(playlist_track_df.tracks.to_list())
+                playlist_df = playlist_df.drop('tracks', axis=1)
+
+                break
+
+
 
     def make_csv_files_from_json_files(self, chunk_size=10):
         filenames = os.listdir(self.jsons_dir)
