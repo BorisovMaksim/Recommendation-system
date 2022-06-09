@@ -16,6 +16,7 @@ def process_json(filename, playlist_track, track, playlist):
                                          for j in range(len(playlist_temp))])
     track_temp = pd.DataFrame(list(chain.from_iterable(playlist_temp['tracks'])))
 
+
     playlist_track = pd.concat([playlist_track, track_temp[['pid', 'track_uri']]])
     track = pd.concat([track, track_temp]).drop_duplicates('track_uri')
     playlist = pd.concat([playlist, playlist_temp.drop(columns=['tracks'], axis=1)])
