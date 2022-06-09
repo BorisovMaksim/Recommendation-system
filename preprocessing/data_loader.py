@@ -9,7 +9,8 @@ from sqlalchemy import create_engine, inspect
 import requests
 import time
 from config import my_config
-
+import tarfile
+import json
 
 class DataLoader:
     def __init__(self):
@@ -24,6 +25,31 @@ class DataLoader:
                                                             client_secret=my_config['SPOTIFY']['CLIENT_SECRET'],
                                                             redirect_uri=my_config['SPOTIFY']['REDIRECT_URI'],
                                                             scope="user-library-read"))
+
+    def parse_data(self, js):
+        playlist_df = pd.DataFrame(js['playlists'])
+        track_df = pd.json_normalize(playlist_df['tracks'].explode('tracks')).drop(
+            'pos', axis=1).drop_duplicates(subset='track_uri')
+        playlist_track_df = pd.concat([playlist_df['pid'], playlist_df.tracks.apply(
+            lambda row: [[playlist['track_uri'], playlist['pos']] for playlist in row])], axis=1).explode(
+            'tracks')
+        playlist_track_df[['tracks', 'pos']] = pd.DataFrame(playlist_track_df.tracks.to_list())
+        playlist_df = playlist_df.drop('tracks', axis=1)
+        return playlist_df, playlist_track_df, track_df
+
+    def create_db(self):
+        path = "/home/maksim/Downloads/spotify_jsons.tar.gz"
+        tar = tarfile.open(path, "r:gz")
+        for member in tar.getmembers():
+            if os.path.splitext(member.name)[1] == ".json":
+                f = tar.extractfile(member)
+                content = f.read()
+                js = json.loads(content)
+                playlist_df, playlist_track_df, track_df = self.parse_data(js)
+                playlist_df.to_sql('playlist_df', con=self.engine, if_exists='append', index=False)
+                playlist_track_df.to_sql('playlist_track_df', con=self.engine, if_exists='append', index=False)
+                track_df.to_sql('track_df', con=self.engine, if_exists='append', index=False)
+                break
 
     def load_random(self, num_playlists):
         playlist_track_random = pd.read_sql_query(f'WITH random_pid AS '

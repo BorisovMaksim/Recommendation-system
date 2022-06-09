@@ -1,6 +1,5 @@
 import pandas as pd
 from config import my_config
-import tarfile
 import os
 import json
 from itertools import chain
@@ -27,27 +26,6 @@ class DataConverter:
     def __init__(self):
         self.root_dir = my_config['SPOTIFY']['DATA_PATH']
         self.jsons_dir = os.path.join(self.root_dir, "data/")
-
-
-    def create_db(self):
-        path = "/home/maksim/Downloads/spotify_jsons.tar.gz"
-        tar = tarfile.open(path, "r:gz")
-        for member in tar.getmembers():
-            if os.path.splitext(member.name)[1] == ".json":
-                f = tar.extractfile(member)
-                content = f.read()
-                js = json.loads(content)
-                playlist_df = pd.DataFrame(js['playlists'])
-                track_df = pd.json_normalize(playlist_df['tracks'].explode('tracks')).drop('pos',
-                                                                                           axis=1).drop_duplicates(
-                    subset='track_uri')
-                playlist_track_df = pd.concat([playlist_df['pid'], playlist_df.tracks.apply(
-                    lambda row: [[playlist['track_uri'], playlist['pos']] for playlist in row])], axis=1).explode(
-                    'tracks')
-                playlist_track_df[['tracks', 'pos']] = pd.DataFrame(playlist_track_df.tracks.to_list())
-                playlist_df = playlist_df.drop('tracks', axis=1)
-
-                break
 
 
 
