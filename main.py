@@ -3,10 +3,12 @@ from app import App
 
 def main(stage, model_name):
     system = App(stage=stage, model_name=model_name)
-    system.process_raw_data()
-    system.load_data_to_db()
-    system.download_songs()
-    system.train()
+    system.collect_data()
+
+    # system.process_raw_data()
+    # system.load_data_to_db()
+    # system.download_songs()
+    # system.train()
     return 1
 
 

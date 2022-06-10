@@ -12,12 +12,26 @@ from config import my_config
 import tarfile
 import json
 
+
+def process_json(js):
+    playlist_df = pd.DataFrame(js['playlists'])
+    track_df = pd.json_normalize(playlist_df['tracks'].explode('tracks')).drop('pos', axis=1).drop_duplicates(
+        subset='track_uri')
+    playlist_track_df = pd.concat([playlist_df['pid'],
+                                   playlist_df.tracks.apply(lambda row:
+                                                            [[playlist['track_uri'], playlist['pos']]
+                                                             for playlist in row])], axis=1).explode('tracks')
+    playlist_track_df = pd.concat([playlist_track_df.pid.reset_index(drop=True),
+                                   pd.DataFrame(playlist_track_df.tracks.to_list(), columns=['tracks', 'pos'])],
+                                  axis=1)
+    playlist_df = playlist_df.drop('tracks', axis=1)
+    return playlist_df, playlist_track_df, track_df
+
+
 class DataLoader:
     def __init__(self):
-        self.root_dir = my_config['SPOTIFY']['DATA_PATH']
-        self.jsons_dir = os.path.join(self.root_dir, "data/")
-        self.song_directory = os.path.join(self.root_dir, "songs/")
-
+        self.path_tar = my_config['SPOTIFY']['DATA_PATH']
+        # self.song_directory = os.path.join(self.root_dir, "songs/")
         self.engine = create_engine(f"postgresql+psycopg2://{my_config['DATABASE']['USERNAME']}:"
                                     f"{my_config['DATABASE']['PASSWORD']}@{my_config['DATABASE']['HOST']}:"
                                     f"{my_config['DATABASE']['PORT']}/{my_config['DATABASE']['DB']}")
@@ -26,30 +40,53 @@ class DataLoader:
                                                             redirect_uri=my_config['SPOTIFY']['REDIRECT_URI'],
                                                             scope="user-library-read"))
 
-    def parse_data(self, js):
-        playlist_df = pd.DataFrame(js['playlists'])
-        track_df = pd.json_normalize(playlist_df['tracks'].explode('tracks')).drop(
-            'pos', axis=1).drop_duplicates(subset='track_uri')
-        playlist_track_df = pd.concat([playlist_df['pid'], playlist_df.tracks.apply(
-            lambda row: [[playlist['track_uri'], playlist['pos']] for playlist in row])], axis=1).explode(
-            'tracks')
-        playlist_track_df[['tracks', 'pos']] = pd.DataFrame(playlist_track_df.tracks.to_list())
-        playlist_df = playlist_df.drop('tracks', axis=1)
-        return playlist_df, playlist_track_df, track_df
+    def table_exists(self, name):
+        inspector = inspect(self.engine)
+        return inspector.dialect.has_table(self.engine.connect(), name)
 
-    def create_db(self):
-        path = "/home/maksim/Downloads/spotify_jsons.tar.gz"
-        tar = tarfile.open(path, "r:gz")
-        for member in tar.getmembers():
+    def columns_exists(self, table_name, column_name):
+        inspector = inspect(self.engine)
+        columns = inspector.get_columns(table_name)
+        return any(c["name"] == column_name for c in columns)
+
+
+    def load_data_to_db(self):
+        if self.table_exists('playlist'):
+            return
+        con = self.engine.connect()
+        tar = tarfile.open(self.path_tar, "r:gz")
+        for count, member in enumerate(tar.getmembers()):
             if os.path.splitext(member.name)[1] == ".json":
+                print(f"Processing {count}-th file {member.name}")
                 f = tar.extractfile(member)
                 content = f.read()
                 js = json.loads(content)
-                playlist_df, playlist_track_df, track_df = self.parse_data(js)
-                playlist_df.to_sql('playlist_df', con=self.engine, if_exists='append', index=False)
-                playlist_track_df.to_sql('playlist_track_df', con=self.engine, if_exists='append', index=False)
-                track_df.to_sql('track_df', con=self.engine, if_exists='append', index=False)
-                break
+                playlist_df, playlist_track_df, track_df = process_json(js)
+                playlist_df.to_sql('playlist', con=self.engine, if_exists='append', index=False)
+                playlist_track_df.to_sql('playlist_track', con=self.engine, if_exists='append', index=False)
+                track_df.to_sql('track', con=self.engine, if_exists='append', index=False)
+                con.execute("""DELETE FROM track T1 USING track T2 
+                                WHERE   T1.ctid < T2.ctid AND T1.track_uri  = T2.track_uri;""")
+
+    def update_db(self):
+        con = self.engine.connect()
+        if self.columns_exists(table_name='playlist', column_name='id'):
+            return
+        con.execute("""ALTER TABLE playlist ADD COLUMN id SERIAL PRIMARY KEY;""")
+        con.execute("""ALTER TABLE track ADD COLUMN id SERIAL PRIMARY KEY;""")
+        con.execute("""CREATE TABLE playlist_track_temp AS 
+                    SELECT playlist.id as playlist_id, track.id as track_id, playlist_track.pos 
+                    FROM playlist_track  
+                    JOIN  playlist ON playlist_track.pid = playlist.pid 
+                    JOIN track ON playlist_track.tracks = track.track_uri;""")
+        con.execute("""DROP TABLE playlist_track;""")
+        con.execute("""ALTER TABLE playlist_track_temp RENAME TO playlist_track;""")
+        con.execute("""ALTER TABLE playlist_track 
+                       ADD CONSTRAINT fk_playlist_id FOREIGN KEY (playlist_id) REFERENCES playlist (id);""")
+        con.execute("""ALTER TABLE playlist_track 
+                              ADD CONSTRAINT fk_track_id FOREIGN KEY (track_id) REFERENCES track (id);""")
+
+
 
     def load_random(self, num_playlists):
         playlist_track_random = pd.read_sql_query(f'WITH random_pid AS '
@@ -133,18 +170,6 @@ class DataLoader:
             return 1
         audio_features = self.get_audio_features(track_path='track_full.csv', step=100)
         audio_features.to_sql('track', con=self.engine, if_exists='replace', index=False, chunksize=5)
-
-    def table_exists(self, name):
-        ins = inspect(self.engine)
-        ret = ins.dialect.has_table(self.engine.connect(), name)
-        print('Table "{}" exists: {}'.format(name, ret))
-        return ret
-
-    def load_csv_tables_to_db(self):
-        for filename in ['playlist_full.csv', 'playlist_track_full.csv']:
-            if not self.table_exists(filename[:-9]):
-                df = pd.read_csv(f"{self.jsons_dir}{filename}")
-                df.to_sql(filename[:-9], con=self.engine, if_exists='replace', index=False, chunksize=10)
 
     def create_playlist_tracks(self):
         return pd.read_sql_query(

@@ -1,7 +1,5 @@
 import pandas as pd
-from preprocessing.data_converter import DataConverter
 from preprocessing.data_loader import DataLoader
-from preprocessing.data_cleaner import DataCleaner
 from modelling.similarity_model import SimilarityModel
 from modelling.base_model import BaseModel
 from modelling.random_model import RandomModel
@@ -22,23 +20,16 @@ class App:
         self.col_type_double = []
         self.col_type_string = []
         self.loader = DataLoader()
-        self.converter = DataConverter()
         self.models = {"cos_similarity": SimilarityModel, "random": RandomModel, "annoy": AnnoyModel}
         self.model = self.models[self.model_name]
 
     def get_model(self, track, train, test) -> BaseModel:
         return self.model(track=track, playlist_train=train, playlist_test=test)
 
-    def process_raw_data(self):
-        if self.stage == "process_raw_data":
-            self.converter.make_csv_files_from_json_files()
+    def collect_data(self):
+        self.loader.load_data_to_db()
+        self.loader.update_db()
 
-    def load_data_to_db(self):
-        if self.stage == "loading_data_to_db":
-            self.loader.load_audio_features_to_db()
-            self.loader.load_csv_tables_to_db()
-            cleaner = DataCleaner()
-            cleaner.clean(retain="songs")
 
     def download_songs(self, num_playlists=10):
         if self.stage == "downloading_songs":
