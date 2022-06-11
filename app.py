@@ -30,6 +30,9 @@ class App:
         self.loader.load_data_to_db()
         self.loader.update_db()
 
+    def extract_features(self):
+        self.loader.get_audio_features()
+
 
     def download_songs(self, num_playlists=10):
         if self.stage == "downloading_songs":

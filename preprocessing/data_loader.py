@@ -49,7 +49,6 @@ class DataLoader:
         columns = inspector.get_columns(table_name)
         return any(c["name"] == column_name for c in columns)
 
-
     def load_data_to_db(self):
         if self.table_exists('playlist'):
             return
@@ -86,6 +85,37 @@ class DataLoader:
         con.execute("""ALTER TABLE playlist_track 
                               ADD CONSTRAINT fk_track_id FOREIGN KEY (track_id) REFERENCES track (id);""")
 
+    def get_audio_features(self, step=100):
+        df_track = pd.read_sql_table('track', con=self.engine)
+        audio_features = pd.DataFrame()
+        audio_cols = ["danceability", "energy", "key", "loudness", "mode", "speechiness", "acousticness",
+                      "instrumentalness", "liveness", "valence", "tempo", "uri"]
+        for i in range(0, len(df_track), step):
+            if i % 10000 == 0:
+                print(f'{i}-TH TRACK IS PROCESSING...')
+            for attempt in range(2):
+                try:
+                    df_slice = df_track['track_uri'][i:i + step]
+                    temp_audio_features = pd.DataFrame(self.sp.audio_features(df_slice))[audio_cols]
+                    audio_features = pd.concat([audio_features, temp_audio_features])
+                except AttributeError:
+                    print(f"    AttributeError OCCURRED FROM {i} TO {i + step}")
+                    break
+                except requests.exceptions.ReadTimeout or requests.exceptions.ConnectionError as e:
+                    print(f"   {e} OCCURRED FROM {i} TO {i + step}")
+                    print(f"        {attempt}-TH RETRY")
+                    time.sleep(10)
+                    continue
+                else:
+                    break
+        audio_features.to_sql('audio_features', if_exists='replace', index=False, con=self.engine)
+        con = self.engine.connect()
+        con.execute("""CREATE TABLE track_temp AS 
+                       SELECT *  FROM  track LEFT JOIN  audio_features ON  audio_features.uri = track.track_uri; """)
+        con.execute("""DROP TABLE track;""")
+        con.execute("""ALTER TABLE track_temp RENAME TO track;""")
+        con.execute("""ALTER TABLE track ADD CONSTRAINT id_pk PRIMARY KEY (id);""")
+        con.execute("""DROP TABLE audio_features;""")
 
 
     def load_random(self, num_playlists):
@@ -128,53 +158,3 @@ class DataLoader:
             raise
         saved_directory = saved_directory.replace("\n", '')
         return saved_directory
-
-    def extract_song_from_folder(self, saved_directory, rename):
-        dir_path = self.song_directory + saved_directory
-        new_path = None
-        for root, dirs, files in os.walk(dir_path):
-            for file in files:
-                if file.endswith('.mp3'):
-                    new_path = self.song_directory + rename
-                    os.rename(dir_path + "/" + file, new_path)
-        shutil.rmtree(dir_path)
-        return new_path
-
-    def get_audio_features(self, track_path, step):
-        df_track = pd.read_csv(f"{self.jsons_dir}/{track_path}")
-        audio_features = pd.DataFrame()
-
-        for i in range(0, len(df_track), step):
-            if i % 100000 == 0:
-                print(f'{i}-TH TRACK IS PROCESSING...')
-            for attempt in range(2):
-                try:
-                    audio_features = pd.concat([audio_features,
-                                                pd.DataFrame(
-                                                    self.sp.audio_features(df_track['track_uri'][i:i + step]))])
-                except AttributeError:
-                    print(f"    AttributeError OCCURRED FROM {i} TO {i + step}")
-                    break
-                except requests.exceptions.ReadTimeout:
-                    print(f"    ReadTimeout ERROR OCCURRED FROM {i} TO {i + step}")
-                    print(f"        {attempt}-TH RETRY")
-                    time.sleep(10)
-                    continue
-                else:
-                    break
-        audio_features.drop(['duration_ms'], axis=1, inplace=True)
-        return df_track.set_index('track_uri').join(audio_features.set_index('uri'), how='left')
-
-    def load_audio_features_to_db(self):
-        if self.table_exists('track'):
-            return 1
-        audio_features = self.get_audio_features(track_path='track_full.csv', step=100)
-        audio_features.to_sql('track', con=self.engine, if_exists='replace', index=False, chunksize=5)
-
-    def create_playlist_tracks(self):
-        return pd.read_sql_query(
-            f"""SELECT playlist_primary_id, array_agg(track_primary_id) AS tracks_in_playlist FROM playlist_track_int 
-            GROUP BY playlist_primary_id ORDER BY RANDOM()""", con=self.engine)
-
-    def load_playlist_tracks_to_db(self):
-        self.create_playlist_tracks().to_sql(name='playlist_tracks', con=self.engine, if_exists='replace', index=False)
