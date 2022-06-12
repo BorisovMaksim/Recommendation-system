@@ -11,6 +11,8 @@ import time
 from config import my_config
 import tarfile
 import json
+import logging
+
 
 
 def process_json(js):
@@ -81,11 +83,11 @@ class DataLoader:
         con.execute("""DROP TABLE playlist_track;""")
         con.execute("""ALTER TABLE playlist_track_temp RENAME TO playlist_track;""")
         con.execute("""ALTER TABLE playlist_track 
-                       ADD CONSTRAINT fk_playlist_id FOREIGN KEY (playlist_id) REFERENCES playlist (id);""")
-        con.execute("""ALTER TABLE playlist_track 
                               ADD CONSTRAINT fk_track_id FOREIGN KEY (track_id) REFERENCES track (id);""")
 
-    def get_audio_features(self, step=100):
+    def download_audio_features(self, step=100):
+        if self.columns_exists(table_name='track', column_name='energy'):
+            return
         df_track = pd.read_sql_table('track', con=self.engine)
         audio_features = pd.DataFrame()
         audio_cols = ["danceability", "energy", "key", "loudness", "mode", "speechiness", "acousticness",
@@ -93,29 +95,36 @@ class DataLoader:
         for i in range(0, len(df_track), step):
             if i % 10000 == 0:
                 print(f'{i}-TH TRACK IS PROCESSING...')
-            for attempt in range(2):
+            for attempt in range(5):
                 try:
                     df_slice = df_track['track_uri'][i:i + step]
-                    temp_audio_features = pd.DataFrame(self.sp.audio_features(df_slice))[audio_cols]
+                    temp_audio_features = pd.DataFrame([x for x in self.sp.audio_features(df_slice)
+                                                        if x is not None])[audio_cols]
                     audio_features = pd.concat([audio_features, temp_audio_features])
-                except AttributeError:
-                    print(f"    AttributeError OCCURRED FROM {i} TO {i + step}")
+                except AttributeError as e:
+                    logging.exception(f"{e} occurred FROM {i} TO {i + step}")
                     break
                 except requests.exceptions.ReadTimeout or requests.exceptions.ConnectionError as e:
-                    print(f"   {e} OCCURRED FROM {i} TO {i + step}")
-                    print(f"        {attempt}-TH RETRY")
+                    logging.exception(f"{e} occurred from {i} to {i + step} step")
                     time.sleep(10)
+                    continue
+                except ValueError as e:
+                    logging.exception(f"{e} occurred from {i} to {i + step} step")
                     continue
                 else:
                     break
         audio_features.to_sql('audio_features', if_exists='replace', index=False, con=self.engine)
         con = self.engine.connect()
-        con.execute("""CREATE TABLE track_temp AS 
+        con.execute("""CREATE TABLE IF NOT EXISTS track_temp AS 
                        SELECT *  FROM  track LEFT JOIN  audio_features ON  audio_features.uri = track.track_uri; """)
         con.execute("""DROP TABLE track;""")
         con.execute("""ALTER TABLE track_temp RENAME TO track;""")
         con.execute("""ALTER TABLE track ADD CONSTRAINT id_pk PRIMARY KEY (id);""")
+        con.execute("""ALTER TABLE playlist_track 
+                                     ADD CONSTRAINT fk_track_id FOREIGN KEY (track_id) REFERENCES track (id);""")
         con.execute("""DROP TABLE audio_features;""")
+        con.execute("""ALTER TABLE track DROP COLUMN track_uri;""")
+
 
 
     def load_random(self, num_playlists):

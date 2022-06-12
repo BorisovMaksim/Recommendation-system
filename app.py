@@ -7,15 +7,11 @@ from modelling.annoy_model import AnnoyModel
 
 
 class App:
-    def __init__(self, model_name, stage):
-        if stage not in ['process_raw_data', 'loading_data_to_db', 'downloading_songs', "train"]:
-            raise ValueError(
-                "Stages are: \n1. process_raw_data\n2. loading_data_to_db\n3. downloading_songs\n4. train\n")
+    def __init__(self, model_name):
         if model_name not in ['random', 'cos_similarity', 'annoy']:
             raise ValueError(
                 "Models are: \n1.random\n2. cos_similarity")
         self.model_name = model_name
-        self.stage = stage
         self.col_type_tgt = []
         self.col_type_double = []
         self.col_type_string = []
@@ -29,60 +25,38 @@ class App:
     def collect_data(self):
         self.loader.load_data_to_db()
         self.loader.update_db()
+        self.loader.download_audio_features()
 
     def extract_features(self):
-        self.loader.get_audio_features()
-
+        avg_num_cols = ", ".join([f"AVG(track.{x}) AS avg_{x}" for x in
+                                  ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'tempo',
+                                   'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence']])
+        data = pd.read_sql_query(f""" WITH temp_playlist AS (SELECT * FROM playlist)
+                                SELECT temp_playlist.id, 
+                                (array_agg(track.id)::int[])[:cardinality(array_agg(track.id))*0.8] as tracks_included,
+                                (array_agg(track.id)::int[])[cardinality(array_agg(track.id))*0.8:] as tracks_excluded,
+                                {avg_num_cols},
+                                COUNT(DISTINCT track.id) as num_tracks, COUNT(DISTINCT track.artist_uri) as num_artists
+                                FROM temp_playlist
+                                LEFT JOIN playlist_track 
+                                ON temp_playlist.id = playlist_track.playlist_id
+                                LEFT JOIN track
+                                ON playlist_track.track_id = track.id
+                                GROUP BY  temp_playlist.id;
+                                """, con=self.loader.engine)
+        data.to_pickle("./data.pkl")
 
     def download_songs(self, num_playlists=10):
-        if self.stage == "downloading_songs":
-            self.loader.load_random(num_playlists=num_playlists)
+        self.loader.load_random(num_playlists=num_playlists)
 
-    def train_test_split(self):
-        if self.stage == "train":
-            if self.loader.table_exists('test') and self.loader.table_exists('train'):
-                train, test = pd.read_sql_query(f"SELECT * FROM  train", con=self.loader.engine), \
-                              pd.read_sql_query(f"SELECT * FROM  test", con=self.loader.engine)
-            else:
-                avg_num_cols = ", ".join([f"AVG({x}) AS avg_{x}" for x in
-                                          ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode',
-                                           'speechiness', 'acousticness',
-                                           'instrumentalness', 'liveness', 'valence', 'tempo']])
-                train = pd.read_sql_query(f"""
-                            WITH train_data AS 
-                            (SELECT playlist_primary_id, tracks_in_playlist::int[] as tracks_in_playlist
-                            FROM playlist_tracks LIMIT (SELECT COUNT(*)*0.8 FROM  playlist_tracks))
-                            SELECT playlist_primary_id, MAX(tracks_in_playlist) AS tracks_in_playlist, {avg_num_cols}
-                            FROM track JOIN train_data 
-                            ON track.track_primary_id = ANY(train_data.tracks_in_playlist::int[]) 
-                            GROUP BY playlist_primary_id
-                            """, con=self.loader.engine)
-                test = pd.read_sql_query(f"""
-                            WITH test_data AS 
-                            (SELECT playlist_primary_id,
-                             (tracks_in_playlist::int[])[:cardinality(tracks_in_playlist::int[])*0.8] as tracks_included,
-                            (tracks_in_playlist::int[])[cardinality(tracks_in_playlist::int[])*0.8:] as tracks_excluded
-                            FROM playlist_tracks 
-                            LIMIT (SELECT COUNT(*) FROM  playlist_tracks)*0.2 
-                            OFFSET (SELECT COUNT(*) FROM  playlist_tracks)*0.8)
-    
-                            SELECT playlist_primary_id, MAX(tracks_included)  AS tracks_included,
-                            MAX(tracks_excluded) AS tracks_excluded , {avg_num_cols}
-                            FROM track JOIN test_data 
-                            ON track.track_primary_id = ANY(test_data.tracks_included::int[]) 
-                            GROUP BY playlist_primary_id;
-                            """, con=self.loader.engine)
-
-                test.to_sql('test', con=self.loader.engine, index=False, if_exists='replace', chunksize=100000)
-                train.to_sql('train', con=self.loader.engine, index=False, if_exists='replace', chunksize=100000)
-            return train, test
 
     def train(self):
-        if self.stage == "train":
-            train, test = self.train_test_split()
-            track = pd.read_sql_table('track', con=self.loader.engine)
-            model = self.get_model(track, train, test)
-            model.process_data()
-            model.train()
-            r_precision = model.test()
-            return r_precision
+        train, test = self.train_test_split()
+        track = pd.read_sql_table('track', con=self.loader.engine)
+        model = self.get_model(track, train, test)
+        model.process_data()
+        model.train()
+        r_precision = model.test()
+        return r_precision
+
+
