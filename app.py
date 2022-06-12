@@ -43,6 +43,7 @@ class App:
                                 ON playlist_track.track_id = track.id
                                 GROUP BY  temp_playlist.id;
                                 """, con=self.loader.engine)
+
         data.to_pickle("./data.pkl")
 
 
