@@ -14,19 +14,21 @@ from sklearn.impute import SimpleImputer
 class AnnoyModel(BaseModel):
     def __init__(self, data):
         self.data = data
-        self.dim = data.shape[1]
+        self.dim = data.select_dtypes(include=['int16', 'int32', 'int64', 'float16', 'float32', 'float64']).shape[1]
 
     def train(self):
-        X = self.data[self.data.columns.difference(['tracks_included', 'tracks_excluded'])]
+        X = self.data[self.data.columns.difference(['tracks_included', 'tracks_excluded'])].copy()
         scaler = StandardScaler()
         X[X.columns] = scaler.fit_transform(X)
         X_train, X_test = train_test_split(X, test_size=0.33, random_state=42)
-        if os.path.exists('/home/maksim/Data/Spotify/annoy_playlist.ann'):
+        if not os.path.exists('./annoy_playlist.ann'):
             t = AnnoyIndex(self.dim, metric='angular')
             for index, playlist in X_train.iterrows():
                 t.add_item(index, playlist)
+            print("pre_build")
             t.build(n_trees=10)
-            t.save('/home/maksim/Data/Spotify/annoy_playlist.ann')
+            print("post_build")
+            t.save('./annoy_playlist.ann')
         # u = AnnoyIndex(self.dim, metric='angular')
         # u.load('/home/maksim/Data/Spotify/annoy_playlist.ann')
         #
