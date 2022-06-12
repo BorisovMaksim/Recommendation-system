@@ -8,7 +8,6 @@ from modelling.annoy_model import AnnoyModel
 
 class App:
     def __init__(self, model_name):
-
         if model_name not in ['random', 'cos_similarity', 'annoy']:
             raise ValueError("Models are: \n1.random\n2. cos_similarity")
         self.model_name = model_name
