@@ -30,6 +30,7 @@ class App:
         avg_num_cols = ", ".join([f"AVG(track.{x}) AS avg_{x}" for x in
                                   ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'tempo',
                                    'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence']])
+
         data = pd.read_sql_query(f""" WITH temp_playlist AS (SELECT * FROM playlist)
                                 SELECT temp_playlist.id, 
                                 (array_agg(track.id)::int[])[:cardinality(array_agg(track.id))*0.8] as tracks_included,
