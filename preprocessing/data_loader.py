@@ -126,6 +126,25 @@ class DataLoader:
         con.execute("""ALTER TABLE track DROP COLUMN track_uri;""")
 
 
+    def aggregate_playlists(self):
+        if not os.path.exists("./data.pkl"):
+            avg_num_cols = ", ".join([f"AVG(track.{x}) AS avg_{x}" for x in
+                                      ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'tempo',
+                                       'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence']])
+            data = pd.read_sql_query(f""" WITH temp_playlist AS (SELECT * FROM playlist)
+                                          SELECT temp_playlist.id, 
+                                          (array_agg(track.id)::int[])[:cardinality(array_agg(track.id))*0.8] as tracks_included,
+                                          (array_agg(track.id)::int[])[cardinality(array_agg(track.id))*0.8:] as tracks_excluded,
+                                          {avg_num_cols},
+                                          COUNT(DISTINCT track.id) as num_tracks, COUNT(DISTINCT track.artist_uri) as num_artists
+                                          FROM temp_playlist
+                                          LEFT JOIN playlist_track 
+                                          ON temp_playlist.id = playlist_track.playlist_id
+                                          LEFT JOIN track
+                                          ON playlist_track.track_id = track.id
+                                          GROUP BY  temp_playlist.id;
+                                          """, con=self.engine)
+            data.to_pickle("./data.pkl")
 
     def load_random(self, num_playlists):
         playlist_track_random = pd.read_sql_query(f'WITH random_pid AS '
