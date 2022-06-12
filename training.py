@@ -1,3 +1,5 @@
+import pandas as pd
+
 from modelling.similarity_model import SimilarityModel
 from modelling.base_model import BaseModel
 from modelling.random_model import RandomModel
@@ -9,9 +11,10 @@ class Train:
         self.models = {"cos_similarity": SimilarityModel, "random": RandomModel, "annoy": AnnoyModel}
         self.model = self.models[model_name]
 
-    def get_model(self, track, train, test) -> BaseModel:
-        return self.model(track=track, playlist_train=train, playlist_test=test)
+    def get_model(self, data) -> BaseModel:
+        return self.model(data=data)
 
     def train(self):
-        model = self.get_model()
-        pass
+        data = pd.read_pickle("data.pkl")
+        model = self.get_model(data=data)
+        model.train()

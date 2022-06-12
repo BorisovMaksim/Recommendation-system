@@ -1,5 +1,6 @@
 import os.path
 
+from sklearn.model_selection import train_test_split
 import numpy as np
 from modelling.base_model import BaseModel
 from sklearn.pipeline import Pipeline
@@ -11,32 +12,45 @@ from sklearn.impute import SimpleImputer
 
 
 class AnnoyModel(BaseModel):
-    def __init__(self, track=None, playlist_train=None, playlist_test=None):
-        self.track = track
-        self.playlist_train = playlist_train
-        self.playlist_test = playlist_test
-        self.numeric_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
-                             'acousticness',
-                             'instrumentalness', 'liveness', 'valence', 'tempo']
-        self.playlist_num_cols = ['avg_' + x for x in self.numeric_cols]
-        self.dim = len(self.numeric_cols)
+    def __init__(self, data):
+        self.data = data
+        self.dim = data.shape[1]
 
     def train(self):
-        if os.path.exists('/home/maksim/Data/Spotify/test.ann'):
-            return
-        t = AnnoyIndex(self.dim, metric='angular')
-        for num, track in self.track.iterrows():
-            if num % 10000 == 0:
-                print(f"train iteration = {num}")
-            vector = track[self.numeric_cols]
-            index = track.track_primary_id
-            t.add_item(index, vector)
-        t.build(n_trees=10)
-        t.save('/home/maksim/Data/Spotify/test.ann')
+        X = self.data[self.data.columns.difference(['tracks_included', 'tracks_excluded'])]
+        scaler = StandardScaler()
+        X[X.columns] = scaler.fit_transform(X)
+        X_train, X_test = train_test_split(X, test_size=0.33, random_state=42)
+        if os.path.exists('/home/maksim/Data/Spotify/annoy_playlist.ann'):
+            t = AnnoyIndex(self.dim, metric='angular')
+            for index, playlist in X_train.iterrows():
+                t.add_item(index, playlist)
+            t.build(n_trees=10)
+            t.save('/home/maksim/Data/Spotify/annoy_playlist.ann')
+        # u = AnnoyIndex(self.dim, metric='angular')
+        # u.load('/home/maksim/Data/Spotify/annoy_playlist.ann')
+        #
+        # r_precisions = []
+        # last_score = -1
+        # for index, playlist in X_test.iterrows():
+        #     top_similar = u.get_nns_by_vector(playlist, 100)
+        #     top_similar_not_in_playlist = [x for x in top_similar
+        #                                    if x not in list(eval(playlist['tracks_included']))][:500]
+        #     index_tracks_excluded = list(eval(playlist.tracks_excluded))
+        #     r_precision = len(set(top_similar_not_in_playlist)
+        #                       & set(index_tracks_excluded)) / len(index_tracks_excluded)
+        #     r_precisions.append(r_precision)
+        #     if index % 100 == 0:
+        #         cur_score = np.mean(r_precisions)
+        #         if abs(cur_score - last_score) < 10e-5:
+        #             break
+        #         last_score = cur_score
+        #     print(f"r_precision for annoy_model after {index} iterations = {np.mean(r_precisions)}")
+        # return np.mean(r_precisions)
 
     def test(self):
         u = AnnoyIndex(self.dim, metric='angular')
-        u.load('/home/maksim/Data/Spotify/test.ann')
+        u.load('/home/maksim/Data/Spotify/annoy_playlist.ann')
         r_precisions = []
         last_score = -1
         for num, playlist in self.playlist_test.iterrows():

@@ -5,10 +5,8 @@ import numpy as np
 
 
 class RandomModel(BaseModel):
-    def __init__(self, track=None, playlist_train=None, playlist_test=None):
-        self.track = track
-        self.playlist_train = playlist_train
-        self.playlist_test = playlist_test
+    def __init__(self, data):
+        self.track = data
         self.numeric_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
                              'acousticness',
                              'instrumentalness', 'liveness', 'valence', 'tempo']

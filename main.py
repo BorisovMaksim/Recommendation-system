@@ -5,10 +5,7 @@ def main(model_name):
     system = App(model_name=model_name)
     system.collect_data()
     system.extract_features()
-    # system.process_raw_data()
-    # system.load_data_to_db()
-    # system.download_songs()
-    # system.train()
+    system.train()
     return 1
 
 
