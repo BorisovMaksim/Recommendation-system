@@ -45,6 +45,7 @@ class App:
                                 """, con=self.loader.engine)
         data.to_pickle("./data.pkl")
 
+
     def download_songs(self, num_playlists=10):
         self.loader.load_random(num_playlists=num_playlists)
 
