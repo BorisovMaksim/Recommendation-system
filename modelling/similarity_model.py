@@ -46,7 +46,6 @@ class SimilarityModel:
                 last_score = cur_score
             print(
                 f"r_precision for similarity_model after {num} iterations = {np.mean(r_precisions)}")
-
         return np.mean(r_precisions)
 
 
