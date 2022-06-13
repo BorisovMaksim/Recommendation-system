@@ -1,78 +1,85 @@
 import os.path
-
+import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
-from modelling.base_model import BaseModel
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from annoy import AnnoyIndex
-from sklearn.impute import SimpleImputer
 
-"""r_precision for annoy_model after 1118 iterations = 0.066"""
+"""r_precision for annoy_model = 0.26"""
 
 
-class AnnoyModel(BaseModel):
-    def __init__(self, data):
+class AnnoyModel:
+    def __init__(self, data, engine):
         self.data = data
+        self.engine = engine
         self.dim = data.select_dtypes(include=['int16', 'int32', 'int64', 'float16', 'float32', 'float64']).shape[1]
+        self.num_columns = self.data.columns.difference(['tracks_included', 'tracks_excluded'])
+        self.scaler = StandardScaler()
 
-    def train(self):
-        X = self.data[self.data.columns.difference(['tracks_included', 'tracks_excluded'])].copy()
-        scaler = StandardScaler()
-        X[X.columns] = scaler.fit_transform(X)
-        X_train, X_test = train_test_split(X, test_size=0.33, random_state=42)
+    def get_similar_tracks(self, similar_playlists):
+        playlist_track_similar = pd.read_sql_query(
+            f"SELECT playlist_id, track_id "
+            f"FROM playlist_track "
+            f"WHERE playlist_track.playlist_id IN ({', '.join([str(x) for x in similar_playlists])})",
+            con=self.engine)
+        track_similar = pd.DataFrame(similar_playlists, columns=['playlist_id']).merge(
+            playlist_track_similar, how='left', on='playlist_id').track_id
+        return track_similar
+
+    def process_data(self):
+        self.data[self.num_columns] = self.scaler.fit_transform(self.data[self.num_columns])
+
+    def test(self):
+        X_train, X_test = train_test_split(self.data, test_size=0.33, random_state=42)
         if not os.path.exists('./annoy_playlist.ann'):
             t = AnnoyIndex(self.dim, metric='angular')
             for index, playlist in X_train.iterrows():
-                t.add_item(index, playlist)
-            print("pre_build")
+                t.add_item(index, playlist[self.num_columns])
             t.build(n_trees=10)
-            print("post_build")
             t.save('./annoy_playlist.ann')
-        # u = AnnoyIndex(self.dim, metric='angular')
-        # u.load('/home/maksim/Data/Spotify/annoy_playlist.ann')
-        #
-        # r_precisions = []
-        # last_score = -1
-        # for index, playlist in X_test.iterrows():
-        #     top_similar = u.get_nns_by_vector(playlist, 100)
-        #     top_similar_not_in_playlist = [x for x in top_similar
-        #                                    if x not in list(eval(playlist['tracks_included']))][:500]
-        #     index_tracks_excluded = list(eval(playlist.tracks_excluded))
-        #     r_precision = len(set(top_similar_not_in_playlist)
-        #                       & set(index_tracks_excluded)) / len(index_tracks_excluded)
-        #     r_precisions.append(r_precision)
-        #     if index % 100 == 0:
-        #         cur_score = np.mean(r_precisions)
-        #         if abs(cur_score - last_score) < 10e-5:
-        #             break
-        #         last_score = cur_score
-        #     print(f"r_precision for annoy_model after {index} iterations = {np.mean(r_precisions)}")
-        # return np.mean(r_precisions)
-
-    def test(self):
         u = AnnoyIndex(self.dim, metric='angular')
-        u.load('/home/maksim/Data/Spotify/annoy_playlist.ann')
+        u.load('./annoy_playlist.ann')
+
         r_precisions = []
         last_score = -1
-        for num, playlist in self.playlist_test.iterrows():
-            top_similar = u.get_nns_by_vector(playlist[self.playlist_num_cols].values, 25000)
-            top_similar_not_in_playlist = [x for x in top_similar
-                                           if x not in list(eval(playlist['tracks_included']))][:20000]
-            index_tracks_excluded = list(eval(playlist.tracks_excluded))
-            r_precision = len(set(top_similar_not_in_playlist)
-                              & set(index_tracks_excluded)) / len(index_tracks_excluded)
+        for num, (index, playlist) in enumerate(X_test.iterrows()):
+            similar_playlists = u.get_nns_by_vector(playlist[self.num_columns], 100)
+            similar_tracks = self.get_similar_tracks(similar_playlists=similar_playlists)
+            similar_tracks_not_in_playlist = [x for x in similar_tracks
+                                                 if x not in playlist['tracks_included']][:500]
+            r_precision = len(set(similar_tracks_not_in_playlist)
+                              & set(playlist.tracks_excluded)) / len(playlist.tracks_excluded)
             r_precisions.append(r_precision)
-            if num % 100 == 0:
+            if num % 10 == 0:
                 cur_score = np.mean(r_precisions)
-                if abs(cur_score - last_score) < 10e-5:
+                if abs(cur_score - last_score) < 10e-6:
                     break
                 last_score = cur_score
             print(f"r_precision for annoy_model after {num} iterations = {np.mean(r_precisions)}")
         return np.mean(r_precisions)
 
-    def process_data(self):
-        pipe = Pipeline([('scaler', StandardScaler()), ('imputer', SimpleImputer(strategy='mean'))])
-        self.track[self.numeric_cols] = pipe.fit_transform(self.track[self.numeric_cols].values)
-        self.playlist_test[self.playlist_num_cols] = pipe.fit_transform(
-            self.playlist_test[self.playlist_num_cols].values)
+    def train(self):
+        if not os.path.exists('./annoy_full_data.ann'):
+            t = AnnoyIndex(self.dim, metric='angular')
+            for index, playlist in self.data.iterrows():
+                t.add_item(index, playlist[self.num_columns])
+            t.build(n_trees=10)
+            t.save('./annoy_full_data.ann')
+
+    def predict(self, tracks_uri, n):
+        u = AnnoyIndex(self.dim, metric='angular')
+        u.load('./annoy_full_data.ann')
+        audio_cols = [x[4:] for x in self.num_columns if x[:4] == 'avg_']
+        df_track = pd.read_sql_query(f"""SELECT {", ".join(audio_cols)},  
+                                         artist_uri, uri, id
+                                         FROM track 
+                                         WHERE uri IN ({', '.join([ f"'{x}'" for x in tracks_uri])})""", con=self.engine)
+        df_track['num_artists'] = len(df_track.artist_uri.unique())
+        df_track['num_tracks'] = len(df_track)
+        playlist = self.scaler.fit_transform(df_track[df_track.columns.difference(['artist_uri', 'uri', 'id'])]).sum(axis=0)
+        similar_playlists = u.get_nns_by_vector(playlist, 100)
+        similar_tracks_id = self.get_similar_tracks(similar_playlists=similar_playlists)[:n]
+        similar_tracks = pd.read_sql_query(f"""SELECT uri FROM track WHERE id IN ({",".join([str(x) for x in
+                                                                            similar_tracks_id])}) """, con=self.engine)
+        return similar_tracks
+

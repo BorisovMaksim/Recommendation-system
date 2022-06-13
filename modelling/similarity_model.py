@@ -3,7 +3,6 @@ import heapq
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from modelling.base_model import BaseModel
 
 
 def cosine_similarity_numpy(array, vector):
@@ -15,8 +14,9 @@ def cosine_similarity_numpy(array, vector):
 """r_precision for similarity_model after 2267 iterations = 0.064"""
 
 
-class SimilarityModel(BaseModel):
-    def __init__(self, data):
+class SimilarityModel:
+    def __init__(self, data, engine):
+        self.engine = engine
         self.track = data
         self.numeric_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
                              'acousticness',

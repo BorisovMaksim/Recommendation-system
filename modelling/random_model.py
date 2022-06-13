@@ -1,11 +1,11 @@
-from modelling.base_model import BaseModel
 import numpy as np
 
 """r_precision for random_model after 199 iterations = 0.008"""
 
 
-class RandomModel(BaseModel):
-    def __init__(self, data):
+class RandomModel:
+    def __init__(self, data, engine):
+        self.engine = engine
         self.track = data
         self.numeric_cols = ['duration_ms', 'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
                              'acousticness',
