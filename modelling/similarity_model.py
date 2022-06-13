@@ -48,6 +48,7 @@ class SimilarityModel:
                 f"r_precision for similarity_model after {num} iterations = {np.mean(r_precisions)}")
         return np.mean(r_precisions)
 
+
     def process_data(self):
         pipe = Pipeline([('scaler', StandardScaler()), ('imputer', SimpleImputer(strategy='mean'))])
         self.track[self.numeric_cols] = pipe.fit_transform(self.track[self.numeric_cols].values)
