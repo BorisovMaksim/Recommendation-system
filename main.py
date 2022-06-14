@@ -31,4 +31,4 @@ class Playlist(Resource):
 
 api.add_resource(Playlist, '/recommend')
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
