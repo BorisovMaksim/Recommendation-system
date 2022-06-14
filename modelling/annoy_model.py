@@ -77,7 +77,7 @@ class AnnoyModel:
         df_track['num_artists'] = len(df_track.artist_uri.unique())
         df_track['num_tracks'] = len(df_track)
         playlist = self.scaler.fit_transform(df_track[df_track.columns.difference(['artist_uri', 'uri', 'id'])]).sum(axis=0)
-        similar_playlists = u.get_nns_by_vector(playlist, 100)
+        similar_playlists = u.get_nns_by_vector(playlist, 2)
         similar_tracks_id = self.get_similar_tracks(similar_playlists=similar_playlists)[:n]
         similar_tracks = pd.read_sql_query(f"""SELECT uri FROM track WHERE id IN ({",".join([str(x) for x in
                                                                             similar_tracks_id])}) """, con=self.engine)
