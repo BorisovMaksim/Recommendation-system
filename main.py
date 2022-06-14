@@ -23,6 +23,7 @@ class Playlist(Resource):
         tracks=["spotify:track:7EDxhByqnzl1B4VJfMXZf4",  "spotify:track:3f0MU7LerrhPX2sJxkGyNa"]' -X POST -v"""
 
     def post(self):
+
         args = parser.parse_args()
         tracks_uri = json.loads("".join(args['tracks']))
         similar_tracks = system.model.predict(tracks_uri=tracks_uri, n=args['n'])
