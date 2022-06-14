@@ -17,7 +17,6 @@ system.train()
 
 
 class Playlist(Resource):
-
     def get(self):
         return """You can use POST for track recommendation! For example 
         curl http://localhost:5000/recommend -d 'n=5&
