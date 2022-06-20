@@ -1,4 +1,10 @@
 from app import App
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--n', type=int, help='number of recommendations')
+parser.add_argument('--tracks', nargs='+')
+args = parser.parse_args()
 
 
 def main(tracks_uri, n):
@@ -7,12 +13,10 @@ def main(tracks_uri, n):
     system.extract_features()
     system.train()
     similar_tracks = system.model.predict(tracks_uri=tracks_uri, n=n)
+    print(similar_tracks)
     return similar_tracks
 
 
 if __name__ == '__main__':
-    main(tracks_uri=["spotify:track:7EDxhByqnzl1B4VJfMXZf4",
-                     "spotify:track:3f0MU7LerrhPX2sJxkGyNa",
-                     "spotify:track:7I10ft1XHvVcYMJGNcevU8",
-                     "spotify:track:4ezv28TGOKCdxjDWPSwVf6",
-                     "spotify:track:6Wv7WQ9ymnLR6g40Cuud6v"], n=3)
+    main(tracks_uri=args.tracks, n=args.n)
+
