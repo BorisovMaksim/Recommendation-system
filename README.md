@@ -1,6 +1,6 @@
 # Spotify Recommendation System
 
-Spotify Recommendation System can recommend tracks from Spotify's Million Playlist Dataset given initial set of tracks uri, which are identifiers from Spotift platform. 
+Spotify Recommendation System can recommend tracks from Spotify's Million Playlist Dataset given initial set of tracks uri ( which are identifiers from Spotift platform). 
 
 
 
