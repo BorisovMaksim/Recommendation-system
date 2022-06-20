@@ -5,6 +5,11 @@ Spotify Recommendation System can recommend tracks from Spotify's Million Playli
 
 
 
+## Basic Usage
+
+![alt text](https://drive.google.com/uc?export=view&id=1T7Za5Iv80PpgWa69YCPetACJ56egbENB)
+
+
 ## Data
  Sampled from the over 4 billion public playlists on Spotify, this dataset of 1 million playlists consist of over 2 million unique tracks by nearly 300,000 artists, and represents the largest public dataset of music playlists in the world. The dataset includes public playlists created by US Spotify users between January 2010 and November 2017.
  
